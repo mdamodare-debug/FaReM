@@ -1,6 +1,11 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-replace-this-in-production')
@@ -57,16 +62,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ffma.wsgi.application'
 
+# Database configuration
+# If DATABASE_URL is provided, use it. Otherwise, fall back to the default local settings.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
-        'USER': 'postgres',
-        'PASSWORD': 'password',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/postgres'),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
+# Ensure the GIS engine is used
+DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
@@ -113,3 +119,8 @@ CACHES = {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
 }
+
+# GeoDjango Windows Configuration
+if os.name == 'nt':
+    GDAL_LIBRARY_PATH = os.environ.get('GDAL_LIBRARY_PATH')
+    GEOS_LIBRARY_PATH = os.environ.get('GEOS_LIBRARY_PATH')

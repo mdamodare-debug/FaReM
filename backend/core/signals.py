@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from .models import Farmer, Territory, User, PromotionLibrary, AuditLog
+from .models import Farmer, Territory, User, PromotionLibrary, SystemAuditLog
 from .tasks import create_audit_log_async
 import threading
 

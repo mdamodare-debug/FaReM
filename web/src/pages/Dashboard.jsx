@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Users, Phone, MapPin, TrendingUp, Download } from 'lucide-react';
+import { Users, Phone, MapPin, TrendingUp, Download, AlertTriangle } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, color, delay }) {
   return (

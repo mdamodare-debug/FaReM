@@ -32,6 +32,22 @@ class DashboardAPIView(APIView):
         # Breakdown by village
         village_data = farmers.values('village').annotate(count=Count('id')).order_by('-count')[:5]
         data['top_villages'] = list(village_data)
+
+        # Overdue Visits calculation
+        from django.utils import timezone
+        from .models import AppConfiguration
+        config = AppConfiguration.get_config()
+        threshold_days = config.visit_frequency_norm_days
+        today = timezone.now().date()
+        
+        overdue_count = 0
+        for farmer in farmers:
+            last_visit = farmer.activities.filter(activity_type='Visit').order_by('-date').first()
+            days_since = (today - last_visit.date).days if last_visit else (today - farmer.date_added.date()).days
+            if days_since >= threshold_days:
+                overdue_count += 1
+        
+        data['overdue_visits'] = overdue_count
         
         return Response(data)
 

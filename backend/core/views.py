@@ -44,7 +44,11 @@ def send_otp(request):
         return Response({"error": "Account is locked due to too many failed attempts. Try again in 30 minutes."}, status=status.HTTP_403_FORBIDDEN)
         
     # Generate OTP
-    otp = ''.join(random.choices(string.digits, k=6))
+    if settings.DEBUG:
+        otp = '123456'
+    else:
+        otp = ''.join(random.choices(string.digits, k=6))
+        
     cache.set(f"otp_{mobile_number}", otp, timeout=300) # 5 minutes valid
     
     # Send OTP

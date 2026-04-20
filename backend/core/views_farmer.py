@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import Farmer, Role
 from .serializers_farmer import FarmerSerializer
-from .tasks import process_farmer_bulk_import
 from .permissions import IsAdminUser
 
 class FarmerViewSet(viewsets.ModelViewSet):

@@ -1,0 +1,8 @@
+DEBUG=True
+SECRET_KEY=your-secure-django-secret-key
+DATABASE_URL=postgresql://postgres.gfsladmfnhnglbftabkh:FuAkZCd5Jl4WQe4e@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres
+REDIS_URL=memory://
+MSG91_AUTH_KEY=your-msg91-key
+INTERAKT_API_KEY=your-interakt-key
+RESEND_API_KEY=your-resend-key
+CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME

@@ -1,0 +1,105 @@
+import React, { useState, useEffect } from 'react';
+import api from '../services/api';
+import { Settings as SettingsIcon, Save, Check } from 'lucide-react';
+
+export default function SettingsPage() {
+  const [config, setConfig] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const data = await api.getConfig();
+        setConfig(data);
+      } catch { /* not admin */ }
+      setLoading(false);
+    };
+    fetchConfig();
+  }, []);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setSaved(false);
+    try {
+      const updated = await api.updateConfig(config);
+      setConfig(updated);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch { /* handled */ }
+    setSaving(false);
+  };
+
+  if (loading) return <div className="card p-8 text-center text-text-muted">Loading settings...</div>;
+  if (!config) return <div className="card p-8 text-center text-text-muted">Settings not available.</div>;
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-6">
+        <SettingsIcon size={20} className="text-primary" />
+        <h2 className="text-xl font-heading font-bold text-text">System Settings</h2>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-6 max-w-2xl">
+        {/* Visit Norms */}
+        <div className="card p-6 animate-stagger-in">
+          <h3 className="font-heading font-semibold text-text mb-4">Visit Frequency Settings</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-1">Visit Frequency Norm (days)</label>
+              <input type="number" min="1" max="90" value={config.visit_frequency_norm_days}
+                onChange={e => setConfig({...config, visit_frequency_norm_days: parseInt(e.target.value)})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none" />
+              <p className="text-xs text-text-muted mt-1">A farmer is marked "overdue" after this many days without a visit.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-1">Smart Planner Refresh Hour (0-23)</label>
+              <input type="number" min="0" max="23" value={config.planner_refresh_hour}
+                onChange={e => setConfig({...config, planner_refresh_hour: parseInt(e.target.value)})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none" />
+              <p className="text-xs text-text-muted mt-1">Hour of day (IST) when the daily visit planner refreshes for all staff.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Gateway Config */}
+        <div className="card p-6 animate-stagger-in" style={{ animationDelay: '60ms' }}>
+          <h3 className="font-heading font-semibold text-text mb-4">Gateway Credentials</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-1">MSG91 Auth Key</label>
+              <input type="password" value={config.msg91_auth_key || ''} placeholder="Enter MSG91 auth key"
+                onChange={e => setConfig({...config, msg91_auth_key: e.target.value})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface font-mono focus:ring-2 focus:ring-primary focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-1">Interakt API Key (WhatsApp)</label>
+              <input type="password" value={config.interakt_api_key || ''} placeholder="Enter Interakt API key"
+                onChange={e => setConfig({...config, interakt_api_key: e.target.value})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface font-mono focus:ring-2 focus:ring-primary focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-1">Cloudinary URL</label>
+              <input type="text" value={config.cloudinary_url || ''} placeholder="cloudinary://API_KEY:API_SECRET@CLOUD_NAME"
+                onChange={e => setConfig({...config, cloudinary_url: e.target.value})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface font-mono focus:ring-2 focus:ring-primary focus:outline-none" />
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" disabled={saving}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium text-sm transition-all btn-press ${
+            saved ? 'bg-success text-white' : 'bg-primary hover:bg-primary-dark text-white'
+          } disabled:opacity-50`}>
+          {saved ? <><Check size={16} /> Saved!</> : saving ? 'Saving...' : <><Save size={16} /> Save Settings</>}
+        </button>
+
+        {config.updated_at && (
+          <p className="text-xs text-text-muted">Last updated: {new Date(config.updated_at).toLocaleString('en-IN')}</p>
+        )}
+      </form>
+    </div>
+  );
+}

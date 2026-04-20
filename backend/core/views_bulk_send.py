@@ -1,0 +1,92 @@
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
+from .models import BulkSendBatch, Farmer, Role
+from .serializers_bulk_send import BulkSendBatchSerializer
+from .tasks import execute_bulk_send_batch
+from .permissions import IsAdminOrZonalManager
+
+class BulkSendBatchViewSet(viewsets.ModelViewSet):
+    queryset = BulkSendBatch.objects.all()
+    serializer_class = BulkSendBatchSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        channel = serializer.validated_data.get('channel')
+        filter_criteria = serializer.validated_data.get('filter_criteria', {})
+        
+        # Resolve Farmer IDs
+        farmers = Farmer.objects.filter(status='Active')
+        
+        # Enforce scope
+        if user.role == Role.FIELD_STAFF:
+            farmers = farmers.filter(assigned_staff=user)
+        elif user.role == Role.TERRITORY_MANAGER:
+            farmers = farmers.filter(territory=user.territory)
+            
+        crop_id = filter_criteria.get('crop')
+        village = filter_criteria.get('village')
+        
+        if crop_id:
+            farmers = farmers.filter(plots__seasons__crop_id=crop_id, plots__seasons__status='Active')
+        if village:
+            farmers = farmers.filter(village__icontains=village)
+            
+        # Exclude opt-outs
+        if channel == 'WhatsApp':
+            farmers = farmers.exclude(opt_out_whatsapp=True)
+        elif channel == 'SMS':
+            farmers = farmers.exclude(opt_out_sms=True)
+            
+        farmer_ids = list(farmers.values_list('id', flat=True))
+        
+        batch = serializer.save(
+            created_by_user=user,
+            farmer_ids=[str(fid) for fid in farmer_ids],
+            recipient_count=len(farmer_ids)
+        )
+        
+        # Notify RM
+        # logic...
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def approve(self, request, pk=None):
+        batch = self.get_object()
+        user = request.user
+        
+        # Approval Rules:
+        # 1. Zonal Manager self-approves their own zone-level sends
+        # 2. Zonal Manager / Admin approves others' sends (acting as Regional Manager)
+        # 3. Territory Managers and Field Staff CANNOT approve.
+        
+        can_approve = False
+        if user.role == Role.ZONAL_MANAGER:
+             # Zonal managers can approve batches in their zone (simplified here)
+             can_approve = True
+        elif user.role == Role.ADMIN:
+            can_approve = True
+            
+        if not can_approve:
+            return Response({"error": "No permission to approve. Only Zonal Managers or Admins can approve bulk sends."}, status=status.HTTP_403_FORBIDDEN)
+            
+        batch.approval_status = 'Approved'
+        batch.approved_by_user = user
+        batch.approval_timestamp = timezone.now()
+        batch.save()
+        
+        # Dispatch Celery Job
+        execute_bulk_send_batch.delay(str(batch.id))
+        
+        return Response({"message": "Batch approved and queued for dispatch"})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        batch = self.get_object()
+        user = request.user
+        # Auth check...
+        batch.approval_status = 'Rejected'
+        batch.save()
+        return Response({"message": "Batch rejected"})

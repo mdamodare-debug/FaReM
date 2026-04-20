@@ -1,0 +1,31 @@
+from rest_framework import serializers, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .models import AppConfiguration
+from .permissions import IsAdminUser
+
+
+class AppConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AppConfiguration
+        fields = ['visit_frequency_norm_days', 'planner_refresh_hour',
+                  'msg91_auth_key', 'interakt_api_key', 'cloudinary_url', 'updated_at']
+        read_only_fields = ['updated_at']
+
+
+class AppConfigurationView(APIView):
+    """Singleton configuration endpoint — GET to read, PUT to update."""
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        config = AppConfiguration.get_config()
+        serializer = AppConfigurationSerializer(config)
+        return Response(serializer.data)
+
+    def put(self, request):
+        config = AppConfiguration.get_config()
+        serializer = AppConfigurationSerializer(config, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

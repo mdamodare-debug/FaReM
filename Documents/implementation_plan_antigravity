@@ -1,0 +1,31 @@
+# FFMA Implementation Plan
+
+This plan details the full scope of building the Dhanashree Field Force Management Application (FFMA) across its web frontend, mobile application, and backend infrastructure. The build will strictly follow the provided requirements, constraints, and the tech stack specified (Django DRF, React Native Expo, React Vite Tailwind, Supabase Postgres/PostGIS, etc.).
+
+## Proposed Changes
+
+We will execute the implementation in the exact required dependency order described below, building every MVP module completely with no placeholders.
+
+### Execution Order
+
+1. **Module 1 — Database Schema & Migrations:** Setup Django ORM, Supabase PostgreSQL, and core models with PostGIS geometry representations.
+2. **Module 2 — OTP Authentication & Session Management:** Implement MSG91-based OTP auth, biometric fallbacks, and JWT session handling.
+3. **Module 3 — RBAC & User Management:** Apply role-based access control, securing endpoints for FieldStaff, Managers, Admin, and ContentTeam.
+4. **Module 4 — Territory Hierarchy Management:** Configure recursive tree logic for Region → Zone → Territory → Staff → Farmer hierarchies.
+5. **Module 7 — Crop Master Configuration:** Develop admin endpoints for managing crops, varieties, and stage-duration configurations.
+6. **Module 5 — Farmer Master & Bulk Import:** Enable farmer profiles and the robust ~50k-record Excel batch-import and deduplication pipeline.
+7. **Module 6 — Plot & Crop Stage Tracking:** Setup geo-tagged plots and crop-season lifecycles with auto-calculating stage transitions.
+8. **Module 8 — Visit & Call Logging (Offline-First):** Build robust offline-first logging with Cloudinary image uploads and idempotent UUID-based sync.
+9. **Module 15 — Audit Log & Farmer Data Deletion Workflow:** Integrate signal-based appending audit logs and the soft-deletion process.
+10. **Module 12 — Promotion Library & Content Management:** Construct the marketing content library with crop/stage/language tagging.
+11. **Module 11 — Recommendations Engine:** Implement structured product recommendations pushing seamlessly via WhatsApp/SMS.
+12. **Module 10 — Overdue Alerts & Stage Transition Reminders:** Scaffold background Celery beat jobs and push notifications for overdue visits.
+13. **Module 9 — Smart Visit Planner:** Implement the geo-spatial and schedule-based visit ranking algorithm.
+14. **Module 13 — Bulk Message Send & Approval Workflow:** Integrate the bulk campaign engine including mandatory Regional Manager approval gates.
+15. **Module 14 — Management Dashboards & Reports:** Assemble real-time WebSocket aggregates and management export engines.
+16. **Module 16 — Field Staff Home Dashboard & Farmer Profile Shell:** Build the primary React Native frontend, consuming the offline-first backend APIs.
+17. **Module 17 — Admin Web Interface Shell & Configuration Screens:** Wire up the Vite + React administrative dashboard and management UIs.
+
+## User Review Required
+
+Please review and approve this execution order so that we can begin incrementally building these modules into full production-readiness. At the end of the full build process, I will generate the required `SETUP.md` document compiling the deploy instructions, timeline, and suggested budget.

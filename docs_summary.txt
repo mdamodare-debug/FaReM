@@ -1,0 +1,184 @@
+--- Parsing app.docx ---
+https://claude.ai/share/ee316883-b29d-49d2-a3da-47db0977b756
+Foundation first, then auth, then data model, then features, then UI shells.
+Module 1 — Database Schema & Migrations
+Module 2 — OTP Authentication & Session Management
+Module 3 — RBAC & User Management
+Module 4 — Territory Hierarchy Management
+Module 7 — Crop Master Configuration
+Module 5 — Farmer Master & Bulk Import
+Module 6 — Plot & Crop Stage Tracking
+Module 8 — Visit & Call Logging (Offline-First)
+Module 15 — Audit Log & Farmer Data Deletion Workflow
+Module 12 — Promotion Library & Content Management
+Module 11 — Recommendations Engine
+Module 10 — Overdue Alerts & Stage Transition Reminders
+Module 9 — Smart Visit Planner
+Module 13 — Bulk Message Send & Approval Workflow
+Module 14 — Management Dashboards & Reports
+Module 16 — Field Staff Home Dashboard & Farmer Profile Shell
+Module 17 — Admin Web Interface Shell & Configuration Screens
+You are out of free messages until 3:30 PM
+
+--- Parsing Dhanashree Crop Solutions Private Limited _ Pre-Development Framework.docx ---
+Optimized Prompt Gallery
+For mobile native apps
+PROMPT 1: Document Analysis (Use Claude Sonnet 4)
+You are a senior product analyst specializing in MSME digital solutions.
+Analyze the attached Pre-Development Framework and extract ONLY what is explicitly stated or clearly implied.
+Output a clear, structured analysis covering:
+1. CORE BUSINESS NEED
+Primary problem being solved
+Main app purpose (one sentence)
+Current process/pain points
+2. USERS & ROLES
+For each user type identified:
+User type name
+Main responsibilities
+Required permissions
+Pain points they face
+3. KEY WORKFLOWS
+List the primary user journeys described:
+Step-by-step flows provided
+Approval points mentioned
+Automation triggers specified
+4. FEATURES
+Clearly separate:
+Must-have (MVP): Features without which app is useless
+Phase 2: Mentioned as "nice to have" or "future"
+Implied: Features necessary for workflows but not explicitly listed
+5. DATA & INTEGRATIONS
+What data needs to be stored
+External integrations required (WhatsApp, payment, SMS, etc.)
+Reporting requirements
+6. TECHNICAL CONSTRAINTS
+Device preferences (mobile/desktop)
+Expected user load
+Budget range mentioned
+Timeline expectations
+7. AUTOMATIONS & NOTIFICATIONS
+What should happen automatically
+Who gets notified about what
+Approval workflows required
+8. GAPS & ASSUMPTIONS
+List anything that is:
+Unclear or ambiguous
+Mentioned but not detailed
+Critical but missing
+FORMAT: Write in clear prose with headers. Use bullet points only for lists. Be concise but complete.
+CRITICAL: Do NOT invent features. If something is unclear, flag it under "Gaps & Assumptions."
+PROMPT 2A: Product Logic & Development Plan (Use Claude Sonnet 4)
+Based on your analysis above, create a comprehensive product specification.
+TASK 1: Define Core Function
+State the single most valuable function this app provides and why it matters most to the business.
+... [TRUNCATED] ...
+
+--- Parsing DhanashreeMasterPlans.docx ---
+MASTER PLANS
+Dhanashree Crop Solutions
+Field Force Application — Master Data Reference
+This document defines the four master plans that form the backbone of the Dhanashree field force application: the Crop Master, Farmer Master, Sales Person Master, and Regional Manager & Back-end Team plan. Each master plan outlines the core data fields, system-generated attributes, actions, and future capabilities required to build and operate the platform.
+www.dhanashreecropsolutions.com
+1. Crop Master Plan
+Central reference for all crops, growth stages, stage durations, and associated digital promotions. Managed by the back-end / admin team.
+2. Farmer Master Plan
+Core record of every grower — identity, location, geotagged plots, crops & stages, and the full engagement history. Linked to field staff and territories.
+3. Sales Person Master Plan
+Field staff profile, territory assignment, farmer portfolio management, daily actions, smart reminders and promotion capabilities. Each staff member sees only their own data.
+4. Regional Manager & Back-end Team Plan
+Territory aggregation, staff oversight, manager-level reporting, master data administration, and future satellite / API integrations. Full data access across the assigned region.
+Badge Legend
+www.dhanashreecropsolutions.com
+
+--- Parsing Dhanashree_FFMA_PRD.docx ---
+DHANASHREE CROP SOLUTIONS
+www.dhanashreecropsolutions.com
+Table of Contents
+1.   Executive Summary	3
+2.   Business Context & Strategic Objectives	3
+3.   Stakeholders & User Roles	4
+4.   Master Data Architecture	5
+4.1   Crop Master Plan	5
+4.2   Farmer Master Plan	7
+4.3   Sales Person (Field Staff) Master Plan	9
+4.4   Regional Manager & Back-End Administration Plan	11
+5.   Application Modules — Detailed Requirements	13
+5.1   Authentication & Access Control	13
+5.2   Farmer Management	13
+5.3   Plot & Geo-Location Management	14
+5.4   Crop & Growth Stage Tracking	14
+5.5   Field Visit Logging	15
+5.6   Call Logging & Click-to-Call	15
+5.7   Recommendations Engine	15
+5.8   Digital Promotions & Content Library	16
+5.9   Communication — WhatsApp & SMS	16
+5.10   Overdue Visit Reminders & Smart Planner	17
+5.11   Dashboards & Reports	17
+6.   Territory & Hierarchy Management	18
+7.   Bulk Farmer Import	19
+8.   Technical Requirements	19
+9.   Phase 2 — Satellite & AI Capabilities	21
+10.   Non-Functional Requirements	22
+11.   Constraints & Assumptions	22
+12.   Glossary	23
+1.  Executive Summary
+Dhanashree Crop Solutions operates a dedicated field force of approximately 60 agronomists and crop advisors who engage directly with farmers to promote modern plant nutrition and crop protection solutions. Each field staff member manages a portfolio of 600–2,000 growers across a defined territory, conducting daily farm visits and phone calls to guide growers towards better agricultural outcomes.
+The Field Force Management Application (FFMA) is a mobile-first, cloud-backed platform designed to digitalise and streamline every dimension of farmer engagement — from grower onboarding and plot geo-tagging to crop stage tracking, visit logging, digital media distribution, and two-way farmer communication.
+In Phase 2, the platform will integrate satellite-derived agronomic intelligence — NDVI indices, soil moisture readings, and hyper-local weather alerts — to enrich crop advisory capabilities and enable precision targeting of promotional content.
+2.  Business Context & Strategic Objectives
+2.1  Organisation Snapshot
+2.2  Problem Statement
+Currently, farmer interactions, visit records, crop data, and communication history are maintained through manual processes — paper registers, Excel sheets, and personal WhatsApp chats — with no central repository, no reminders, and no analytics. This creates:
+Inability for management to monitor field activity or farmer coverage in real time.
+No systematic reminder for overdue farm visits, leading to neglected farmer relationships.
+No structured way to deliver the right promotional content to the right farmer at the right crop growth stage.
+Inability to aggregate data by crop, village, territory, or growth stage for planning decisions.
+No audit trail of recommendations or communications given to farmers.
+... [TRUNCATED] ...
+
+--- Parsing FFMA_Product_Specification_v1.0.docx ---
+DHANASHREE CROP SOLUTIONS
+Field Force Management Application
+Comprehensive Product Specification — Phase 1
+TASK 1 — Core Function
+Primary Value Proposition
+Why This Matters Most
+Dhanashree Crop Solutions manages 60 agronomists and ~50,000 farmers across rural Maharashtra. Every current process — visit records, crop-stage tracking, product recommendations, and promotional communications — is fragmented across paper registers, personal Excel sheets, and individual WhatsApp messages. There is no system of record, no management visibility, and no automation.
+The single most valuable function of the FFMA is therefore not a feature — it is the elimination of farmer invisibility. When a field staff member opens the app each morning and sees a ranked list of exactly who needs attention, what their crops are doing, and what to communicate, the business moves from reactive to proactive. Every action is permanently logged, creating an audit trail that makes the entire 60-person field force measurable, manageable, and scalable.
+Business Impact Summary
+Converts a 60-person informal operation into a structured, data-driven field force
+Eliminates dependence on individual staff memory for farmer engagement history
+Provides management real-time visibility without phone-based manual check-ins
+Creates the data foundation for Phase 2 satellite, soil, and weather intelligence
+Scales without re-architecture to 200 field staff and 200,000 farmers
+TASK 2 — User Roles & Permissions (RBAC)
+All permissions are enforced at the API layer. Client-side UI restrictions alone are insufficient — every endpoint validates the requesting user's role before returning or mutating data. A user cannot access data outside their assigned scope regardless of how the API is called.
+Permissions Matrix
+Role Profiles
+Role: Field Staff / Agronomist (~60 users)
+Primary Device: Android smartphone — must work offline
+Can do:
+Manage their assigned farmer portfolio of 600–2,000 farmers
+Add new farmers in the field; edit existing farmer and plot records
+Log field visits with auto-captured GPS, date/time, notes, and photos
+Log calls (date and time only — no duration or direction required)
+Create and send product recommendations (product name, dose, timing)
+Push promotional content to individual farmers or bulk groups (with Regional Manager approval for bulk)
+Use the Smart Visit Planner to generate a daily ranked visit schedule
+Update crop stages after physically verifying in the field
+Raise a farmer data deletion request to the Admin
+Cannot do:
+View other staff members' farmer portfolios
+Delete farmer records
+Access territory or zone-level reports
+Upload or manage content library items
+Send bulk messages without Regional Manager approval
+Role: Territory Manager (~10–15 users)
+Primary Device: Android smartphone + web browser
+Can do:
+Monitor all field staff visits, calls, and recommendations within their territory
+View all farmer-level data across their territory (read-only)
+Access territory dashboards: farmers by village, crop, and stage; staff leaderboard; promotion reach
+Review and quality-check field staff recommendations
+... [TRUNCATED] ...
+

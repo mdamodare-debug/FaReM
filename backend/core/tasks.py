@@ -114,6 +114,128 @@ def commit_farmer_import(import_job_id):
     return {"status": "import_complete", "created": created_count, "updated": updated_count}
 
 @shared_task
+def validate_user_import(import_job_id):
+    from .models import ImportJob, User, Territory
+    try:
+        job = ImportJob.objects.get(id=import_job_id)
+    except ImportJob.DoesNotExist:
+        return {"status": "failed", "error": "Job not found"}
+
+    try:
+        df = pd.read_excel(job.filename)
+    except Exception as e:
+        job.status = 'Failed'
+        job.error_report = [{"error": str(e)}]
+        job.save()
+        return {"status": "failed", "error": str(e)}
+
+    total_rows = len(df)
+    valid_rows = 0
+    error_count = 0
+    duplicate_count = 0
+    error_report = []
+
+    required_columns = ['FirstName', 'MobileNumber', 'Role']
+    if not all(col in df.columns for col in required_columns):
+        job.status = 'Failed'
+        job.error_report = [{"error": f"Missing required columns. Required: {required_columns}"}]
+        job.save()
+        return {"status": "failed", "error": "Missing required columns"}
+
+    roles = [r[0] for r in User.Role.choices]
+
+    for index, row in df.iterrows():
+        try:
+            mobile = str(row['MobileNumber']).strip()
+            role = str(row['Role']).strip()
+            
+            if len(mobile) != 10 or not mobile.isdigit():
+                raise ValueError("MobileNumber must be exactly 10 digits")
+
+            if role not in roles:
+                raise ValueError(f"Invalid Role: {role}. Must be one of {roles}")
+
+            if User.objects.filter(mobile_number=mobile).exists():
+                duplicate_count += 1
+            
+            # Check territory if provided
+            if 'Territory' in df.columns and not pd.isna(row['Territory']):
+                t_name = str(row['Territory']).strip()
+                if not Territory.objects.filter(name=t_name).exists():
+                    raise ValueError(f"Territory '{t_name}' not found")
+
+            valid_rows += 1
+        except Exception as e:
+            error_count += 1
+            error_report.append({"row": index + 2, "error": str(e)})
+
+    job.total_rows = total_rows
+    job.valid_rows = valid_rows
+    job.error_count = error_count
+    job.duplicate_count = duplicate_count
+    job.error_report = error_report
+    job.status = 'Pending'
+    job.save()
+
+    return {"status": "validation_complete", "job_id": str(job.id)}
+
+@shared_task
+def commit_user_import(import_job_id):
+    from .models import ImportJob, User, Territory
+    try:
+        job = ImportJob.objects.get(id=import_job_id)
+    except ImportJob.DoesNotExist:
+        return {"status": "failed", "error": "Job not found"}
+
+    df = pd.read_excel(job.filename)
+    created_count = 0
+    updated_count = 0
+
+    for index, row in df.iterrows():
+        try:
+            first_name = str(row['FirstName']).strip()
+            last_name = str(row.get('LastName', '')).strip()
+            mobile = str(row['MobileNumber']).strip()
+            employee_id = str(row.get('EmployeeID', '')).strip()
+            email = str(row.get('Email', '')).strip()
+            role = str(row['Role']).strip()
+            territory_name = str(row.get('Territory', '')).strip()
+
+            territory = None
+            if territory_name:
+                territory = Territory.objects.filter(name=territory_name).first()
+
+            user, created = User.objects.update_or_create(
+                mobile_number=mobile,
+                defaults={
+                    'username': mobile,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'employee_id': employee_id,
+                    'email': email,
+                    'role': role,
+                    'territory': territory,
+                    'status': 'Active'
+                }
+            )
+
+            if created:
+                created_count += 1
+            else:
+                updated_count += 1
+        except:
+            continue
+
+    job.status = 'Completed'
+    job.save()
+
+    import os
+    if os.path.exists(job.filename):
+        os.remove(job.filename)
+
+    return {"status": "import_complete", "created": created_count, "updated": updated_count}
+
+@shared_task
 def create_audit_log_async(entity_type, entity_id, field_changed, old_value, new_value, user_id, action_type):
     from .models import SystemAuditLog
     SystemAuditLog.objects.create(

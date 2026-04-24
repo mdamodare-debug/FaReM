@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { Plus, Upload, Search } from 'lucide-react';
 import ImportWizard from '../components/ImportWizard';
@@ -6,7 +7,8 @@ import ImportWizard from '../components/ImportWizard';
 export default function FarmerManagement() {
   const [farmers, setFarmers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [showWizard, setShowWizard] = useState(false);
 
   const fetchFarmers = async () => {
@@ -22,7 +24,8 @@ export default function FarmerManagement() {
   const filtered = farmers.filter(f =>
     f.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     f.village?.toLowerCase().includes(search.toLowerCase()) ||
-    f.primary_mobile?.includes(search)
+    f.primary_mobile?.includes(search) ||
+    f.assigned_staff_mobile?.includes(search)
   );
 
   return (

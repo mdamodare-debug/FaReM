@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import User, SystemAuditLog
@@ -13,6 +13,8 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['mobile_number', 'employee_id', 'first_name', 'last_name', 'email', 'territory__name']
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -28,6 +30,58 @@ class UserViewSet(viewsets.ModelViewSet):
             user_id=str(request.user.id)
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, IsAdminUser])
+    def upload_for_validation(self, request):
+        if 'file' not in request.FILES:
+            return Response({"error": "excel file is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        file_obj = request.FILES['file']
+        
+        import os
+        from django.conf import settings
+        import_dir = os.path.join(settings.BASE_DIR, 'media', 'imports')
+        os.makedirs(import_dir, exist_ok=True)
+        file_path = os.path.join(import_dir, f"users_{request.user.id}_{file_obj.name}")
+        
+        with open(file_path, 'wb+') as destination:
+            for chunk in file_obj.chunks():
+                destination.write(chunk)
+        
+        from .models import ImportJob
+        import_job = ImportJob.objects.create(
+            created_by=request.user,
+            filename=file_path,
+            status='Processing'
+        )
+        
+        from .tasks import validate_user_import
+        validate_user_import.delay(str(import_job.id))
+        
+        return Response({"message": "Validation started", "import_job_id": str(import_job.id)}, status=status.HTTP_202_ACCEPTED)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, IsAdminUser])
+    def commit_import(self, request):
+        import_job_id = request.data.get('import_job_id')
+        is_acknowledged = request.data.get('is_acknowledged', False)
+        
+        from .models import ImportJob
+        try:
+            job = ImportJob.objects.get(id=import_job_id, created_by=request.user)
+        except ImportJob.DoesNotExist:
+            return Response({"error": "Import job not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        if job.status != 'Pending':
+             return Response({"error": "Job is not in a committable state"}, status=status.HTTP_400_BAD_REQUEST)
+             
+        job.status = 'Processing'
+        job.is_acknowledged = is_acknowledged
+        job.save()
+        
+        from .tasks import commit_user_import
+        commit_user_import.delay(str(job.id))
+        
+        return Response({"message": "Import commit started", "import_job_id": str(job.id)})
 
     def destroy(self, request, *args, **kwargs):
         # Soft delete instead of hard delete

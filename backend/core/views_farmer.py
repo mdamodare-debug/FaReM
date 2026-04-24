@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +9,8 @@ from .permissions import IsAdminUser
 class FarmerViewSet(viewsets.ModelViewSet):
     serializer_class = FarmerSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['full_name', 'primary_mobile', 'village', 'assigned_staff__mobile_number']
 
     def get_queryset(self):
         user = self.request.user

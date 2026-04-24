@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { X, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 
-export default function ImportWizard({ onClose, onComplete }) {
+export default function ImportWizard({ onClose, onComplete, resource = 'farmers' }) {
   const [step, setStep] = useState(1);
   const [file, setFile] = useState(null);
   const [jobId, setJobId] = useState(null);
@@ -14,7 +14,9 @@ export default function ImportWizard({ onClose, onComplete }) {
     if (!file) return;
     setLoading(true);
     try {
-      const resp = await api.uploadForValidation(file);
+      const resp = resource === 'users' 
+        ? await api.uploadUsersForValidation(file)
+        : await api.uploadForValidation(file);
       setJobId(resp.import_job_id);
       setStep(2);
     } catch (err) {
@@ -49,7 +51,11 @@ export default function ImportWizard({ onClose, onComplete }) {
   const handleCommit = async () => {
     setLoading(true);
     try {
-      await api.commitImportFarmers(jobId, acknowledged);
+      if (resource === 'users') {
+        await api.commitImportUsers(jobId, acknowledged);
+      } else {
+        await api.commitImportFarmers(jobId, acknowledged);
+      }
       onComplete();
       onClose();
     } catch (err) {
@@ -62,7 +68,7 @@ export default function ImportWizard({ onClose, onComplete }) {
     <div className="fixed inset-0 bg-text/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden animate-stagger-in">
         <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-bg/50">
-          <h3 className="font-heading font-bold text-text">Bulk Import Wizard</h3>
+          <h3 className="font-heading font-bold text-text">Bulk Import Wizard ({resource === 'users' ? 'Users' : 'Farmers'})</h3>
           <button onClick={onClose} className="text-text-muted hover:text-text transition-colors">
             <X size={20} />
           </button>
@@ -71,7 +77,17 @@ export default function ImportWizard({ onClose, onComplete }) {
         <div className="p-6">
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-sm text-text-muted">Upload your farmer data Excel file for validation.</p>
+              <p className="text-sm text-text-muted">Upload your {resource === 'users' ? 'user' : 'farmer'} data Excel file for validation.</p>
+              
+              {resource === 'users' && (
+                <div className="text-xs bg-bg p-3 rounded border border-border text-text-muted">
+                  <p className="font-bold mb-1">Required Columns:</p>
+                  <p>FirstName, MobileNumber, Role</p>
+                  <p className="mt-1 font-bold mb-1">Optional Columns:</p>
+                  <p>LastName, EmployeeID, Email, Territory</p>
+                </div>
+              )}
+
               <div className="border-2 border-dashed border-border rounded-xl p-8 text-center bg-bg/20">
                 <input
                   type="file" accept=".xlsx,.xls"
@@ -80,7 +96,7 @@ export default function ImportWizard({ onClose, onComplete }) {
                 />
                 <label htmlFor="import-file" className="cursor-pointer">
                   <div className="text-primary font-heading font-medium mb-1">
-                    {file ? file.name : 'Click to select Excel file'}
+                    {file ? file.name : `Click to select Excel file`}
                   </div>
                   <div className="text-xs text-text-muted">Only .xlsx or .xls accepted</div>
                 </label>
@@ -101,7 +117,7 @@ export default function ImportWizard({ onClose, onComplete }) {
               <Loader2 size={40} className="mx-auto text-primary animate-spin" />
               <div>
                 <p className="font-heading font-semibold text-text">Validating Data...</p>
-                <p className="text-sm text-text-muted">We are checking 50,000 potential records and duplicates.</p>
+                <p className="text-sm text-text-muted">We are checking potential records and duplicates.</p>
               </div>
             </div>
           )}
@@ -109,11 +125,13 @@ export default function ImportWizard({ onClose, onComplete }) {
           {step === 3 && jobData && (
             <div className="space-y-6">
               {jobData.status === 'Failed' ? (
-                <div className="bg-danger/10 p-4 rounded-lg flex gap-3 text-danger">
+                <div className="bg-danger/10 p-4 rounded-lg flex gap-3 text-danger overflow-y-auto max-h-60">
                   <AlertTriangle size={20} className="shrink-0" />
                   <div className="text-sm">
                     <p className="font-bold mb-1">Validation Failed</p>
-                    <p>{jobData.error_report?.[0]?.error || 'Unknown error'}</p>
+                    {jobData.error_report?.map((err, i) => (
+                      <p key={i} className="mb-1">Row {err.row || 'N/A'}: {err.error}</p>
+                    )) || <p>Unknown error</p>}
                   </div>
                 </div>
               ) : (
@@ -137,28 +155,11 @@ export default function ImportWizard({ onClose, onComplete }) {
                     </div>
                   </div>
 
-                  {jobData.total_rows > 1000 && (
-                    <div className="bg-accent/10 p-4 rounded-lg border border-accent/20">
-                      <label className="flex gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={acknowledged}
-                          onChange={e => setAcknowledged(e.target.checked)}
-                          className="mt-1"
-                        />
-                        <span className="text-sm text-text leading-tight">
-                          I acknowledge that I am importing <strong>{jobData.total_rows}</strong> records. 
-                          I have reviewed the duplicate and error summary.
-                        </span>
-                      </label>
-                    </div>
-                  )}
-
                   <div className="flex gap-3">
                     <button onClick={() => setStep(1)} className="btn-secondary flex-1">Start Over</button>
                     <button
                       onClick={handleCommit}
-                      disabled={loading || (jobData.total_rows > 1000 && !acknowledged)}
+                      disabled={loading}
                       className="btn-primary flex-1 flex items-center justify-center gap-2"
                     >
                       {loading && <Loader2 size={16} className="animate-spin" />}

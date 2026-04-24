@@ -116,6 +116,17 @@ class ApiClient {
   createUser(data) { return this.request('/users/', { method: 'POST', body: JSON.stringify(data) }); }
   updateUser(id, data) { return this.request(`/users/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }); }
   deleteUser(id) { return this.request(`/users/${id}/`, { method: 'DELETE' }); }
+  uploadUsersForValidation(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.request('/users/upload_for_validation/', { method: 'POST', body: formData });
+  }
+  commitImportUsers(jobId, acknowledged) {
+    return this.request('/users/commit_import/', {
+      method: 'POST',
+      body: JSON.stringify({ import_job_id: jobId, is_acknowledged: acknowledged })
+    });
+  }
 
   // Territories
   getTerritories() { return this.request('/territories/'); }

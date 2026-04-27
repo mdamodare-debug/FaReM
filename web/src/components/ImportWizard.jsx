@@ -14,9 +14,14 @@ export default function ImportWizard({ onClose, onComplete, resource = 'farmers'
     if (!file) return;
     setLoading(true);
     try {
-      const resp = resource === 'users' 
-        ? await api.uploadUsersForValidation(file)
-        : await api.uploadForValidation(file);
+      let resp;
+      if (resource === 'users') {
+        resp = await api.uploadUsersForValidation(file);
+      } else if (resource === 'promotions') {
+        resp = await api.uploadPromotionsForValidation(file);
+      } else {
+        resp = await api.uploadForValidation(file);
+      }
       setJobId(resp.import_job_id);
       setStep(2);
     } catch (err) {
@@ -53,6 +58,8 @@ export default function ImportWizard({ onClose, onComplete, resource = 'farmers'
     try {
       if (resource === 'users') {
         await api.commitImportUsers(jobId, acknowledged);
+      } else if (resource === 'promotions') {
+        await api.commitImportPromotions(jobId);
       } else {
         await api.commitImportFarmers(jobId, acknowledged);
       }
@@ -68,7 +75,7 @@ export default function ImportWizard({ onClose, onComplete, resource = 'farmers'
     <div className="fixed inset-0 bg-text/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden animate-stagger-in">
         <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-bg/50">
-          <h3 className="font-heading font-bold text-text">Bulk Import Wizard ({resource === 'users' ? 'Users' : 'Farmers'})</h3>
+          <h3 className="font-heading font-bold text-text">Bulk Import Wizard ({resource === 'users' ? 'Users' : resource === 'promotions' ? 'Promotions' : 'Farmers'})</h3>
           <button onClick={onClose} className="text-text-muted hover:text-text transition-colors">
             <X size={20} />
           </button>
@@ -77,7 +84,7 @@ export default function ImportWizard({ onClose, onComplete, resource = 'farmers'
         <div className="p-6">
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-sm text-text-muted">Upload your {resource === 'users' ? 'user' : 'farmer'} data Excel file for validation.</p>
+              <p className="text-sm text-text-muted">Upload your {resource === 'users' ? 'user' : resource === 'promotions' ? 'promotion' : 'farmer'} data Excel file for validation.</p>
               
               {resource === 'users' && (
                 <div className="text-xs bg-bg p-3 rounded border border-border text-text-muted">
@@ -85,6 +92,24 @@ export default function ImportWizard({ onClose, onComplete, resource = 'farmers'
                   <p>FirstName, MobileNumber, Role</p>
                   <p className="mt-1 font-bold mb-1">Optional Columns:</p>
                   <p>LastName, EmployeeID, Email, Territory</p>
+                </div>
+              )}
+
+              {resource === 'promotions' && (
+                <div className="text-xs bg-bg p-3 rounded border border-border text-text-muted">
+                  <p className="font-bold mb-1">Required Columns:</p>
+                  <p>Title, ContentType, FileURL</p>
+                  <p className="mt-1 font-bold mb-1">Optional Columns:</p>
+                  <p>Crop, Stage, Product</p>
+                </div>
+              )}
+
+              {resource === 'farmers' && (
+                <div className="text-xs bg-bg p-3 rounded border border-border text-text-muted">
+                  <p className="font-bold mb-1">Required Columns:</p>
+                  <p>FullName, PrimaryMobile, Village, StaffMobile</p>
+                  <p className="mt-1 font-bold mb-1">Tips:</p>
+                  <p>StaffMobile must match an existing user's mobile number.</p>
                 </div>
               )}
 

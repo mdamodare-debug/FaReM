@@ -14,6 +14,8 @@ from . import views_recommendation
 from . import views_planner
 from . import views_bulk_send
 from . import views_config
+from . import views_product
+from . import views_import
 
 router = DefaultRouter()
 router.register(r'users', views_users.UserViewSet, basename='users')
@@ -27,6 +29,8 @@ router.register(r'crop-seasons', views_plot.CropSeasonViewSet, basename='crop-se
 router.register(r'activities', views_activity.ActivityLogViewSet, basename='activities')
 router.register(r'audit-logs', views_audit.SystemAuditLogViewSet, basename='audit-logs')
 router.register(r'promotions', views_promotion.PromotionLibraryViewSet, basename='promotions')
+router.register(r'products', views_product.ProductMasterViewSet, basename='products')
+router.register(r'import-jobs', views_import.ImportJobViewSet, basename='import-jobs')
 router.register(r'recommendations', views_recommendation.RecommendationViewSet, basename='recommendations')
 router.register(r'planner', views_planner.PlannerViewSet, basename='planner')
 router.register(r'bulk-sends', views_bulk_send.BulkSendBatchViewSet, basename='bulk-sends')

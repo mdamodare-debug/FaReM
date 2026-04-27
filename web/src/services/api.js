@@ -172,6 +172,20 @@ class ApiClient {
   createPromotion(data) { return this.request('/promotions/', { method: 'POST', body: JSON.stringify(data) }); }
   updatePromotion(id, data) { return this.request(`/promotions/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }); }
   deletePromotion(id) { return this.request(`/promotions/${id}/`, { method: 'DELETE' }); }
+  uploadPromotionsForValidation(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.request('/promotions/upload_for_validation/', { method: 'POST', body: formData });
+  }
+  commitImportPromotions(jobId) {
+    return this.request('/promotions/commit_import/', {
+      method: 'POST',
+      body: JSON.stringify({ import_job_id: jobId })
+    });
+  }
+
+  // Products
+  getProducts() { return this.request('/products/'); }
 
   // Bulk Sends
   getBulkSends() { return this.request('/bulk-sends/'); }

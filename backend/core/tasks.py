@@ -362,3 +362,109 @@ def execute_bulk_send_batch(batch_id):
         return {"status": "success", "sent": sent, "failed": failed}
     except BulkSendBatch.DoesNotExist:
         return {"status": "failed", "error": "Batch not found"}
+
+@shared_task
+def validate_promotion_import(import_job_id):
+    from .models import ImportJob, PromotionLibrary, CropMaster, CropStage, ProductMaster
+    import pandas as pd
+    try:
+        job = ImportJob.objects.get(id=import_job_id)
+    except ImportJob.DoesNotExist:
+        return {"status": "failed", "error": "Job not found"}
+
+    try:
+        df = pd.read_excel(job.filename)
+    except Exception as e:
+        job.status = 'Failed'
+        job.error_report = [{"error": str(e)}]
+        job.save()
+        return {"status": "failed", "error": str(e)}
+
+    total_rows = len(df)
+    valid_rows = 0
+    error_count = 0
+    error_report = []
+
+    required_columns = ['Title', 'ContentType', 'FileURL']
+    if not all(col in df.columns for col in required_columns):
+        job.status = 'Failed'
+        job.error_report = [{"error": f"Missing required columns. Required: {required_columns}"}]
+        job.save()
+        return {"status": "failed", "error": "Missing required columns"}
+
+    for index, row in df.iterrows():
+        try:
+            title = str(row['Title']).strip()
+            ctype = str(row['ContentType']).strip()
+            url = str(row['FileURL']).strip()
+            
+            if ctype not in ['Video', 'Image', 'PDF', 'Link']:
+                raise ValueError(f"Invalid ContentType: {ctype}")
+
+            valid_rows += 1
+        except Exception as e:
+            error_count += 1
+            error_report.append({"row": index + 2, "error": str(e)})
+
+    job.total_rows = total_rows
+    job.valid_rows = valid_rows
+    job.error_count = error_count
+    job.error_report = error_report
+    job.status = 'Pending'
+    job.save()
+
+    return {"status": "validation_complete", "job_id": str(job.id)}
+
+@shared_task
+def commit_promotion_import(import_job_id):
+    from .models import ImportJob, PromotionLibrary, CropMaster, CropStage, ProductMaster
+    import pandas as pd
+    try:
+        job = ImportJob.objects.get(id=import_job_id)
+    except ImportJob.DoesNotExist:
+        return {"status": "failed", "error": "Job not found"}
+
+    df = pd.read_excel(job.filename)
+    created_count = 0
+
+    for index, row in df.iterrows():
+        try:
+            title = str(row['Title']).strip()
+            ctype = str(row['ContentType']).strip()
+            url = str(row['FileURL']).strip()
+            
+            promo = PromotionLibrary.objects.create(
+                title=title,
+                content_type=ctype,
+                file_url=url,
+                status='Active'
+            )
+
+            if 'Crop' in df.columns and not pd.isna(row['Crop']):
+                c_name = str(row['Crop']).strip()
+                crop = CropMaster.objects.filter(crop_name=c_name).first()
+                if crop: promo.crop = crop
+
+            if 'Stage' in df.columns and not pd.isna(row['Stage']):
+                s_name = str(row['Stage']).strip()
+                stage = CropStage.objects.filter(stage_name=s_name).first()
+                if stage: promo.stage = stage
+
+            if 'Product' in df.columns and not pd.isna(row['Product']):
+                p_name = str(row['Product']).strip()
+                product, _ = ProductMaster.objects.get_or_create(name=p_name)
+                promo.related_product = product
+            
+            promo.save()
+            created_count += 1
+        except:
+            continue
+
+    job.status = 'Completed'
+    job.save()
+
+    import os
+    if os.path.exists(job.filename):
+        os.remove(job.filename)
+
+    return {"status": "import_complete", "created": created_count}

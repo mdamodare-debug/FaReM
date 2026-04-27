@@ -176,18 +176,29 @@ class Recommendation(models.Model):
     send_status = models.CharField(max_length=50, choices=[('Sent', 'Sent'), ('Delivered', 'Delivered'), ('Failed', 'Failed')], default='Sent')
     timestamp = models.DateTimeField(auto_now_add=True)
 
+class ProductMaster(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255, unique=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
 class PromotionLibrary(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     content_type = models.CharField(max_length=50, choices=[('Video', 'Video'), ('Image', 'Image'), ('PDF', 'PDF'), ('Link', 'Link')])
     file_url = models.URLField(max_length=500)
-    crop_tags = models.ManyToManyField(CropMaster, blank=True)
-    stage_tags = models.ManyToManyField(CropStage, blank=True)
+    crop = models.ForeignKey(CropMaster, on_delete=models.SET_NULL, null=True, blank=True)
+    stage = models.ForeignKey(CropStage, on_delete=models.SET_NULL, null=True, blank=True)
+    related_product = models.ForeignKey(ProductMaster, on_delete=models.SET_NULL, null=True, blank=True)
     language_tags = models.JSONField(default=list, blank=True) # list of languages e.g., ["English", "Marathi"]
     expiry_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     whatsapp_template = models.CharField(max_length=255, blank=True, null=True)
     sms_template = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 class BulkSendBatch(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

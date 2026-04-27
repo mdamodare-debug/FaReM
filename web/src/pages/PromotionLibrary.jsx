@@ -1,12 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Edit2, Trash2, Search, Upload, ExternalLink } from 'lucide-react';
+import ImportWizard from '../components/ImportWizard';
 
 export default function PromotionLibrary() {
   const [promos, setPromos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title: '', content_type: 'Image', file_url: '', language_tags: ['English'], expiry_date: '' });
+  const [showWizard, setShowWizard] = useState(false);
+  const [editingPromo, setEditingPromo] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Masters for dropdowns
+  const [crops, setCrops] = useState([]);
+  const [stages, setStages] = useState([]);
+  const [products, setProducts] = useState([]);
+
+  const [form, setForm] = useState({ 
+    title: '', 
+    content_type: 'Image', 
+    file_url: '', 
+    language_tags: ['English'], 
+    expiry_date: '',
+    crop: '',
+    stage: '',
+    related_product: ''
+  });
+
+  // Derived filtered stages
+  const filteredStages = stages.filter(s => s.crop === form.crop);
 
   const fetchPromos = async () => {
     try {
@@ -16,19 +38,80 @@ export default function PromotionLibrary() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchPromos(); }, []);
+  const fetchMasters = async () => {
+    try {
+      const [cropsData, stagesData, productsData] = await Promise.all([
+        api.getCrops(),
+        api.request('/crop-stages/'), 
+        api.getProducts()
+      ]);
+      setCrops(Array.isArray(cropsData) ? cropsData : cropsData.results || []);
+      setStages(Array.isArray(stagesData) ? stagesData : stagesData.results || []);
+      setProducts(Array.isArray(productsData) ? productsData : productsData.results || []);
+    } catch (err) { console.error('Failed to fetch masters', err); }
+  };
 
-  const handleCreate = async (e) => {
+  useEffect(() => { 
+    fetchPromos(); 
+    fetchMasters();
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const payload = { ...form };
       if (!payload.expiry_date) delete payload.expiry_date;
-      await api.createPromotion(payload);
+      if (!payload.related_product) payload.related_product = null;
+      if (!payload.crop) payload.crop = null;
+      if (!payload.stage) payload.stage = null;
+
+      if (editingPromo) {
+        await api.updatePromotion(editingPromo.id, payload);
+      } else {
+        await api.createPromotion(payload);
+      }
+      
       setShowForm(false);
-      setForm({ title: '', content_type: 'Image', file_url: '', language_tags: ['English'], expiry_date: '' });
+      setEditingPromo(null);
+      setForm({ title: '', content_type: 'Image', file_url: '', language_tags: ['English'], expiry_date: '', crop: '', stage: '', related_product: '' });
+      fetchPromos();
+    } catch (err) { alert(err.error || 'Failed to save'); }
+  };
+
+  const handleEdit = (promo) => {
+    setEditingPromo(promo);
+    setForm({
+      title: promo.title,
+      content_type: promo.content_type,
+      file_url: promo.file_url,
+      language_tags: promo.language_tags || ['English'],
+      expiry_date: promo.expiry_date || '',
+      crop: promo.crop || '',
+      stage: promo.stage || '',
+      related_product: promo.related_product || ''
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this content?')) return;
+    try {
+      await api.deletePromotion(id);
       fetchPromos();
     } catch { /* handled */ }
   };
+
+  const filteredPromos = promos.filter(p => {
+    const lowSearch = searchTerm.toLowerCase();
+    return (
+      p.title.toLowerCase().includes(lowSearch) ||
+      p.content_type.toLowerCase().includes(lowSearch) ||
+      p.product_name?.toLowerCase().includes(lowSearch) ||
+      p.crop_name?.toLowerCase().includes(lowSearch) ||
+      p.stage_name?.toLowerCase().includes(lowSearch)
+    );
+  });
 
   const typeIcons = { Video: '🎬', Image: '🖼️', PDF: '📄', Link: '🔗' };
 
@@ -36,56 +119,168 @@ export default function PromotionLibrary() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-heading font-bold text-text">Promotion Library</h2>
-        <button onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-medium text-sm btn-press">
-          <Plus size={16} /> Add Content
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setShowWizard(true)}
+            className="flex items-center gap-2 bg-accent hover:bg-accent-dark text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors btn-press"
+          >
+            <Upload size={16} /> Bulk Import
+          </button>
+          <button onClick={() => {
+            setEditingPromo(null);
+            setForm({ title: '', content_type: 'Image', file_url: '', language_tags: ['English'], expiry_date: '', crop_tags: [], stage_tags: [], related_product: '' });
+            setShowForm(!showForm);
+          }}
+            className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors btn-press">
+            <Plus size={16} /> Add Content
+          </button>
+        </div>
       </div>
 
+      {showWizard && (
+        <ImportWizard 
+          resource="promotions"
+          onClose={() => setShowWizard(false)}
+          onComplete={fetchPromos}
+        />
+      )}
+
       {showForm && (
-        <div className="card p-6 mb-6 animate-stagger-in">
+        <div className="card p-6 mb-6 animate-stagger-in border-2 border-primary/20">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-heading font-semibold">New Content Item</h3>
-            <button onClick={() => setShowForm(false)}><X size={18} className="text-text-muted" /></button>
+            <h3 className="font-heading font-semibold text-text">{editingPromo ? 'Edit Content' : 'New Content Item'}</h3>
+            <button onClick={() => setShowForm(false)} className="text-text-muted hover:text-text"><X size={18} /></button>
           </div>
-          <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
-            <input placeholder="Title" value={form.title} onChange={e => setForm({...form, title: e.target.value})}
-              className="px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none" required />
-            <select value={form.content_type} onChange={e => setForm({...form, content_type: e.target.value})}
-              className="px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none">
-              <option value="Image">Image</option><option value="Video">Video</option>
-              <option value="PDF">PDF</option><option value="Link">Link</option>
-            </select>
-            <input placeholder="File/Content URL" value={form.file_url} onChange={e => setForm({...form, file_url: e.target.value})}
-              className="px-3 py-2 border border-border rounded-lg text-sm bg-surface font-mono focus:ring-2 focus:ring-primary focus:outline-none col-span-2" required />
-            <input type="date" placeholder="Expiry Date" value={form.expiry_date} onChange={e => setForm({...form, expiry_date: e.target.value})}
-              className="px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none" />
-            <div className="flex justify-end items-end">
-              <button type="submit" className="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-lg font-medium text-sm btn-press">Create</button>
+          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-text-muted mb-1">Title*</label>
+              <input placeholder="Content Title" value={form.title} onChange={e => setForm({...form, title: e.target.value})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none" required />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-semibold text-text-muted mb-1">Content Type</label>
+              <select value={form.content_type} onChange={e => setForm({...form, content_type: e.target.value})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none">
+                <option value="Image">Image</option><option value="Video">Video</option>
+                <option value="PDF">PDF</option><option value="Link">Link</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-muted mb-1">Expiry Date</label>
+              <input type="date" value={form.expiry_date} onChange={e => setForm({...form, expiry_date: e.target.value})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none" />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-text-muted mb-1">File/Content URL*</label>
+              <input placeholder="https://..." value={form.file_url} onChange={e => setForm({...form, file_url: e.target.value})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface font-mono focus:ring-2 focus:ring-primary focus:outline-none" required />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-muted mb-1">Product (Optional)</label>
+              <select value={form.related_product} onChange={e => setForm({...form, related_product: e.target.value})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface">
+                <option value="">-- Select Product --</option>
+                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-muted mb-1">Crop (Optional)</label>
+              <select 
+                value={form.crop} 
+                onChange={e => setForm({...form, crop: e.target.value, stage: ''})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface"
+              >
+                <option value="">-- Select Crop --</option>
+                {crops.map(c => <option key={c.id} value={c.id}>{c.crop_name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-muted mb-1">Stage (Optional)</label>
+              <select 
+                value={form.stage} 
+                onChange={e => setForm({...form, stage: e.target.value})}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface"
+                disabled={!form.crop}
+              >
+                <option value="">-- Select Stage --</option>
+                {filteredStages.map(s => <option key={s.id} value={s.id}>{s.stage_name}</option>)}
+              </select>
+            </div>
+
+            <div className="flex justify-end items-end col-span-2 gap-3">
+              <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg font-medium text-sm text-text-muted">Cancel</button>
+              <button type="submit" className="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors btn-press">
+                {editingPromo ? 'Update Content' : 'Create Content'}
+              </button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Global Search */}
+      <div className="relative mb-6">
+        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+        <input 
+          type="text" 
+          placeholder="Search by title, product, crop, stage or type..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 border border-border rounded-xl text-sm bg-white shadow-sm focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
-          <div className="col-span-3 card p-8 text-center text-text-muted">Loading...</div>
-        ) : promos.length === 0 ? (
-          <div className="col-span-3 card p-8 text-center text-text-muted">No content in library.</div>
-        ) : promos.map((promo, i) => (
-          <div key={promo.id} className="card p-4 animate-stagger-in" style={{ animationDelay: `${i * 60}ms` }}>
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">{typeIcons[promo.content_type] || '📎'}</span>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm text-text truncate">{promo.title}</h4>
-                <p className="text-xs text-text-muted mt-1 font-mono truncate">{promo.file_url}</p>
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <span className="badge bg-blue-50 text-blue-700">{promo.content_type}</span>
-                  <span className={`badge ${promo.status === 'Active' ? 'badge-active' : 'badge-inactive'}`}>{promo.status}</span>
-                  {promo.expiry_date && <span className="text-xs text-text-muted">Expires: {promo.expiry_date}</span>}
+          <div className="col-span-3 card p-12 text-center text-text-muted">
+            <div className="animate-spin inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+            <p>Loading library...</p>
+          </div>
+        ) : filteredPromos.length === 0 ? (
+          <div className="col-span-3 card p-12 text-center text-text-muted">No content found.</div>
+        ) : filteredPromos.map((promo, i) => (
+          <div key={promo.id} className="card group overflow-hidden border border-border hover:border-primary/30 transition-all p-0 flex flex-col animate-stagger-in" style={{ animationDelay: `${i * 40}ms` }}>
+            <div className="p-4 flex-1">
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-3xl bg-bg rounded-lg p-2">{typeIcons[promo.content_type] || '📎'}</span>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => handleEdit(promo)} className="p-1.5 text-text-muted hover:text-primary transition-colors"><Edit2 size={16} /></button>
+                  <button onClick={() => handleDelete(promo.id)} className="p-1.5 text-text-muted hover:text-danger transition-colors"><Trash2 size={16} /></button>
                 </div>
               </div>
+              
+              <h4 className="font-heading font-bold text-text mb-1 line-clamp-1">{promo.title}</h4>
+              
+              <a 
+                href={promo.file_url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-xs text-primary hover:underline flex items-center gap-1 mb-4"
+              >
+                {promo.file_url.length > 35 ? promo.file_url.substring(0, 35) + '...' : promo.file_url}
+                <ExternalLink size={12} />
+              </a>
+
+              <div className="flex flex-wrap gap-1.5 mt-auto">
+                <span className="badge bg-blue-50 text-blue-700 text-[10px]">{promo.content_type}</span>
+                {promo.product_name && <span className="badge bg-purple-50 text-purple-700 text-[10px] font-bold">📦 {promo.product_name}</span>}
+                {promo.crop_name && <span className="badge bg-green-50 text-green-700 text-[10px]">🌱 {promo.crop_name}</span>}
+                {promo.stage_name && <span className="badge bg-amber-50 text-amber-700 text-[10px]">📅 {promo.stage_name}</span>}
+                <span className={`badge text-[10px] ${promo.status === 'Active' ? 'badge-active' : 'badge-inactive'}`}>{promo.status}</span>
+              </div>
             </div>
+            
+            {promo.expiry_date && (
+              <div className="bg-bg/50 px-4 py-2 border-t border-border text-[10px] text-text-muted flex justify-between">
+                <span>Expires:</span>
+                <span className="font-medium">{new Date(promo.expiry_date).toLocaleDateString()}</span>
+              </div>
+            )}
           </div>
         ))}
       </div>
